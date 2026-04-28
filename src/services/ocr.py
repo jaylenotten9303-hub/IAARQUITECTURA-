@@ -1,28 +1,31 @@
-import pytesseract
-import cv2
-import numpy as np
-from PIL import Image
-from pdf2image import convert_from_bytes
+import base64
 import os
+from openai import OpenAI
 
-pytesseract.pytesseract.tesseract_cmd = os.getenv(
-    "TESSERACT_CMD", "tesseract"
-)
-
-def preprocess_image(img: np.ndarray) -> np.ndarray:
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return thresh
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extract_text_from_image(file_bytes: bytes, filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1].lower()
+    mime = "application/pdf" if ext == "pdf" else f"image/{ext if ext != 'jpg' else 'jpeg'}"
+    b64 = base64.b64encode(file_bytes).decode("utf-8")
 
-    if ext == "pdf":
-        pages = convert_from_bytes(file_bytes)
-        texts = [pytesseract.image_to_string(page) for page in pages]
-        return "\n".join(texts).strip()
-
-    img_array = np.frombuffer(file_bytes, np.uint8)
-    img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-    processed = preprocess_image(img)
-    return pytesseract.image_to_string(Image.fromarray(processed)).strip()
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Extract all text, numbers, equations, and data from this image exactly as written. Return only the extracted content, no commentary.",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{mime};base64,{b64}"},
+                    },
+                ],
+            }
+        ],
+        max_tokens=1000,
+    )
+    return response.choices[0].message.content.strip()

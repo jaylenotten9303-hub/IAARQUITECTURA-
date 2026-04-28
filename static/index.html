@@ -780,6 +780,10 @@
         <p>o haz clic para seleccionar · JPG, PNG · hasta 20 imágenes</p>
         <div id="file-list"></div>
       </div>
+      <div style="margin-top:16px;">
+        <label style="display:block;font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text2);margin-bottom:8px;">¿Qué necesitas calcular específicamente? <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.6">(opcional)</span></label>
+        <textarea id="image-question" rows="2" placeholder="Ej: Calcular el área de acero As y verificar la cuantía mínima&#10;Ej: Solo necesito el momento último Mu&#10;Ej: Diseñar la sección completa según ACI 318" style="min-height:72px;"></textarea>
+      </div>
       <button class="submit" id="btn-image" onclick="solveImage()">Resolver problema</button>
     </div>
 
@@ -1087,6 +1091,8 @@
       try {
         const form = new FormData();
         selectedFiles.forEach(f => form.append('files', f));
+        const q = document.getElementById('image-question').value.trim();
+        if (q) form.append('question', q);
         const res = await fetch(API + '/api/v1/solve', { method: 'POST', body: form });
         const text = await res.text();
         let data;

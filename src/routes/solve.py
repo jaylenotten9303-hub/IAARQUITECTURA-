@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -75,7 +75,11 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
     }
 
 @router.post("/solve")
-async def solve_image(files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+async def solve_image(
+    files: List[UploadFile] = File(...),
+    question: str = Form(""),
+    db: Session = Depends(get_db),
+):
     if len(files) > MAX_IMAGES:
         raise HTTPException(status_code=400, detail=f"Máximo {MAX_IMAGES} imágenes por solicitud.")
 
@@ -93,6 +97,9 @@ async def solve_image(files: List[UploadFile] = File(...), db: Session = Depends
 
     if not problem_text.strip():
         raise HTTPException(status_code=422, detail="No se pudo extraer texto de las imágenes.")
+
+    if question.strip():
+        problem_text += f"\n\nEl usuario necesita calcular específicamente: {question.strip()}"
 
     return _save_and_solve(problem_text, "image", db)
 

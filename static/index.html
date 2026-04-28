@@ -97,18 +97,8 @@
       100% { transform: translate(-50%, 50px)  scale(0.9);  }
     }
 
-    /* subtle tech grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(108,138,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(108,138,255,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
-    }
+    /* grid is drawn on canvas — no CSS grid needed */
+    body::before { display: none; }
 
     body > * { position: relative; z-index: 1; }
     .bg-orb  { z-index: 0; }
@@ -1207,13 +1197,19 @@
         btn.disabled = false;
       }
     }
-    // ── Particle background ──────────────────────────────────────
+    // ── Animated drafting grid + particles ───────────────────────
     (function () {
       const canvas = document.getElementById('bg-canvas');
       const ctx    = canvas.getContext('2d');
-      let W, H, particles;
+      let W, H, particles, t = 0;
 
-      const COUNT  = 55;
+      // grid config
+      const MINOR = 40;   // minor grid spacing px
+      const MAJOR = 200;  // major grid spacing px (every 5 minor)
+      const DOT_R = 1.5;  // intersection dot radius
+
+      // particle config
+      const COUNT  = 50;
       const COLORS = ['108,138,255', '167,139,250', '34,211,238'];
 
       function resize() {
@@ -1225,18 +1221,106 @@
         return {
           x:  Math.random() * W,
           y:  Math.random() * H,
-          r:  Math.random() * 1.4 + 0.4,
-          vx: (Math.random() - 0.5) * 0.25,
-          vy: (Math.random() - 0.5) * 0.25,
-          a:  Math.random() * 0.35 + 0.08,
+          r:  Math.random() * 1.3 + 0.4,
+          vx: (Math.random() - 0.5) * 0.22,
+          vy: (Math.random() - 0.5) * 0.22,
+          a:  Math.random() * 0.3 + 0.07,
           c:  COLORS[Math.floor(Math.random() * COLORS.length)],
         };
       }
 
+      function drawGrid() {
+        // pulse: each line gets a slow individual phase offset so glow ripples across the grid
+        const basePulse = 0.5 + 0.5 * Math.sin(t * 0.0008);          // global breath 0–1
+
+        // ── minor lines ──
+        for (let x = 0; x <= W; x += MINOR) {
+          const isMajor = x % MAJOR === 0;
+          if (isMajor) continue;
+          const phase = 0.5 + 0.5 * Math.sin(t * 0.0006 + x * 0.015);
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.strokeStyle = `rgba(108,138,255,${0.025 * phase})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+        for (let y = 0; y <= H; y += MINOR) {
+          const isMajor = y % MAJOR === 0;
+          if (isMajor) continue;
+          const phase = 0.5 + 0.5 * Math.sin(t * 0.0006 + y * 0.015);
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+          ctx.strokeStyle = `rgba(108,138,255,${0.025 * phase})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+
+        // ── major lines (brighter, glow) ──
+        ctx.shadowBlur = 0;
+        for (let x = 0; x <= W; x += MAJOR) {
+          const phase = 0.4 + 0.6 * Math.sin(t * 0.0005 + x * 0.008);
+          const a = 0.09 * phase * basePulse;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, H);
+          ctx.strokeStyle = `rgba(108,138,255,${a})`;
+          ctx.lineWidth = 1;
+          ctx.shadowColor = `rgba(108,138,255,${a * 0.8})`;
+          ctx.shadowBlur = 6;
+          ctx.stroke();
+        }
+        for (let y = 0; y <= H; y += MAJOR) {
+          const phase = 0.4 + 0.6 * Math.sin(t * 0.0005 + y * 0.008);
+          const a = 0.09 * phase * basePulse;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y);
+          ctx.strokeStyle = `rgba(108,138,255,${a})`;
+          ctx.lineWidth = 1;
+          ctx.shadowColor = `rgba(108,138,255,${a * 0.8})`;
+          ctx.shadowBlur = 6;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // ── intersection dots at major crossings ──
+        for (let x = 0; x <= W; x += MAJOR) {
+          for (let y = 0; y <= H; y += MAJOR) {
+            const phase = 0.3 + 0.7 * Math.sin(t * 0.001 + x * 0.009 + y * 0.007);
+            ctx.beginPath();
+            ctx.arc(x, y, DOT_R, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(108,138,255,${0.35 * phase * basePulse})`;
+            ctx.shadowColor = `rgba(108,138,255,0.6)`;
+            ctx.shadowBlur  = 8 * phase;
+            ctx.fill();
+          }
+        }
+        ctx.shadowBlur = 0;
+
+        // ── minor intersection dots (very subtle) ──
+        for (let x = MINOR; x <= W; x += MINOR) {
+          if (x % MAJOR === 0) continue;
+          for (let y = MINOR; y <= H; y += MINOR) {
+            if (y % MAJOR === 0) continue;
+            const phase = 0.5 + 0.5 * Math.sin(t * 0.0007 + x * 0.01 + y * 0.01);
+            ctx.beginPath();
+            ctx.arc(x, y, 0.6, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(108,138,255,${0.07 * phase})`;
+            ctx.fill();
+          }
+        }
+      }
+
       function init() { resize(); particles = Array.from({length: COUNT}, mkParticle); }
 
-      function draw() {
+      function draw(ts) {
+        t = ts;
         ctx.clearRect(0, 0, W, H);
+
+        drawGrid();
+
         particles.forEach(p => {
           p.x += p.vx; p.y += p.vy;
           if (p.x < -2) p.x = W + 2;
@@ -1248,12 +1332,13 @@
           ctx.fillStyle = `rgba(${p.c},${p.a})`;
           ctx.fill();
         });
+
         requestAnimationFrame(draw);
       }
 
-      window.addEventListener('resize', () => { resize(); });
+      window.addEventListener('resize', resize);
       init();
-      draw();
+      requestAnimationFrame(draw);
     })();
   </script>
 

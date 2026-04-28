@@ -35,3 +35,7 @@ if os.path.isdir(static_dir):
     @app.get("/")
     def index():
         return FileResponse(os.path.join(static_dir, "index.html"))
+
+    @app.get("/antigravity")
+    def antigravity():
+        return FileResponse(os.path.join(static_dir, "antigravity.html"))

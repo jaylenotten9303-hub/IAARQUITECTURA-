@@ -421,7 +421,9 @@
         const form = new FormData();
         form.append('file', file);
         const res = await fetch(API + '/api/v1/solve', { method: 'POST', body: form });
-        const data = await res.json();
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { throw new Error(text.slice(0, 200)); }
         if (!res.ok) throw new Error(data.detail || 'Error del servidor');
         renderResult(data);
       } catch (e) {
@@ -445,7 +447,9 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text })
         });
-        const data = await res.json();
+        const raw = await res.text();
+        let data;
+        try { data = JSON.parse(raw); } catch { throw new Error(raw.slice(0, 200)); }
         if (!res.ok) throw new Error(data.detail || 'Error del servidor');
         renderResult(data);
       } catch (e) {

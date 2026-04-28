@@ -613,6 +613,133 @@
       animation: fadeUp 0.6s 0.3s ease both;
     }
 
+    /* ─── Guide ─── */
+    .guide-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 16px;
+      color: var(--text2);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin: 16px auto 0;
+      width: 100%;
+      text-align: left;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .guide-toggle:hover { border-color: var(--accent); color: var(--text); background: rgba(108,138,255,0.05); }
+    .guide-toggle.open  { border-color: rgba(108,138,255,0.3); color: var(--text); background: rgba(108,138,255,0.05); }
+
+    .guide-toggle .gt-icon {
+      margin-left: auto;
+      transition: transform 0.25s;
+      font-style: normal;
+      font-size: 0.75rem;
+      opacity: 0.6;
+    }
+
+    .guide-toggle.open .gt-icon { transform: rotate(180deg); }
+
+    .guide-panel {
+      display: none;
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      animation: fadeUp 0.25s ease both;
+    }
+
+    .guide-panel.open { display: block; }
+
+    .guide-tabs {
+      display: flex;
+      overflow-x: auto;
+      background: rgba(0,0,0,0.2);
+      border-bottom: 1px solid var(--border);
+      gap: 0;
+      scrollbar-width: none;
+    }
+
+    .guide-tabs::-webkit-scrollbar { display: none; }
+
+    .guide-tab {
+      flex-shrink: 0;
+      padding: 9px 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text2);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .guide-tab:hover  { color: var(--text); }
+    .guide-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .guide-body { padding: 18px 20px; font-size: 0.82rem; line-height: 1.6; }
+
+    .guide-pane { display: none; }
+    .guide-pane.active { display: block; }
+
+    .guide-pane h4 {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .guide-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .guide-row:last-child { border-bottom: none; }
+
+    .guide-sym {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--accent);
+      min-width: 60px;
+      flex-shrink: 0;
+    }
+
+    .guide-desc { color: var(--text2); flex: 1; }
+
+    .guide-unit {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text2);
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+
+    .guide-note {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(251,191,36,0.06);
+      border: 1px solid rgba(251,191,36,0.18);
+      border-radius: 8px;
+      font-size: 0.78rem;
+      color: var(--warn);
+      line-height: 1.5;
+    }
+
     /* ─── Animations ─── */
     @keyframes fadeDown {
       from { opacity: 0; transform: translateY(-18px); }
@@ -660,6 +787,106 @@
     <div id="tab-text" class="tab-content">
       <textarea id="text-input" rows="6" placeholder="Escribe el problema aquí.&#10;Ej: Viga de concreto simplemente apoyada, b=30cm, h=55cm, d=46cm, f'c=210 kg/cm², fy=4200 kg/cm², WD=15 kN/m, WL=20 kN/m, L=6m. Calcular Mu y As."></textarea>
       <button class="submit" id="btn-text" onclick="solveText()">Resolver problema</button>
+    </div>
+
+    <!-- Guide -->
+    <button class="guide-toggle" id="guide-toggle" onclick="toggleGuide()">
+      📋 ¿Qué datos debo incluir en el problema?
+      <i class="gt-icon">▼</i>
+    </button>
+
+    <div class="guide-panel" id="guide-panel">
+      <div class="guide-tabs" id="guide-tabs">
+        <button class="guide-tab active" onclick="switchGuide(0)">Viga Concreto</button>
+        <button class="guide-tab" onclick="switchGuide(1)">Columna Concreto</button>
+        <button class="guide-tab" onclick="switchGuide(2)">Viga Acero</button>
+        <button class="guide-tab" onclick="switchGuide(3)">Losa</button>
+        <button class="guide-tab" onclick="switchGuide(4)">Zapata</button>
+        <button class="guide-tab" onclick="switchGuide(5)">Conexión Acero</button>
+      </div>
+
+      <div class="guide-body">
+
+        <!-- Viga Concreto -->
+        <div class="guide-pane active" id="gp-0">
+          <h4>Viga de Concreto Reforzado (ACI 318)</h4>
+          <div class="guide-row"><span class="guide-sym">b</span><span class="guide-desc">Ancho de la sección</span><span class="guide-unit">cm / m</span></div>
+          <div class="guide-row"><span class="guide-sym">h</span><span class="guide-desc">Altura total de la sección</span><span class="guide-unit">cm / m</span></div>
+          <div class="guide-row"><span class="guide-sym">d</span><span class="guide-desc">Peralte efectivo (h − recubrimiento)</span><span class="guide-unit">cm / m</span></div>
+          <div class="guide-row"><span class="guide-sym">f'c</span><span class="guide-desc">Resistencia del concreto a compresión</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">fy</span><span class="guide-desc">Fluencia del acero de refuerzo</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">WD</span><span class="guide-desc">Carga muerta distribuida</span><span class="guide-unit">kN/m o t/m</span></div>
+          <div class="guide-row"><span class="guide-sym">WL</span><span class="guide-desc">Carga viva distribuida</span><span class="guide-unit">kN/m o t/m</span></div>
+          <div class="guide-row"><span class="guide-sym">L</span><span class="guide-desc">Longitud del tramo</span><span class="guide-unit">m</span></div>
+          <div class="guide-row"><span class="guide-sym">Apoyos</span><span class="guide-desc">Tipo: simplemente apoyada, continua, en voladizo</span><span class="guide-unit">—</span></div>
+          <div class="guide-note">💡 Indica qué se pide calcular: Mu, As, φMn, verificación de cortante, etc.</div>
+        </div>
+
+        <!-- Columna Concreto -->
+        <div class="guide-pane" id="gp-1">
+          <h4>Columna de Concreto Reforzado (ACI 318)</h4>
+          <div class="guide-row"><span class="guide-sym">b, h</span><span class="guide-desc">Dimensiones de la sección transversal</span><span class="guide-unit">cm</span></div>
+          <div class="guide-row"><span class="guide-sym">f'c</span><span class="guide-desc">Resistencia del concreto a compresión</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">fy</span><span class="guide-desc">Fluencia del acero de refuerzo</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">Pu</span><span class="guide-desc">Carga axial última (o PD y PL por separado)</span><span class="guide-unit">kN o ton</span></div>
+          <div class="guide-row"><span class="guide-sym">Mu</span><span class="guide-desc">Momento último (si hay flexo-compresión)</span><span class="guide-unit">kN·m o ton·m</span></div>
+          <div class="guide-row"><span class="guide-sym">Lu</span><span class="guide-desc">Longitud libre de la columna</span><span class="guide-unit">m</span></div>
+          <div class="guide-row"><span class="guide-sym">Arriostr.</span><span class="guide-desc">Si está o no arriostrada (afecta esbeltez)</span><span class="guide-unit">—</span></div>
+          <div class="guide-note">💡 Especifica si quieres diseñar el refuerzo (As) o verificar una sección existente.</div>
+        </div>
+
+        <!-- Viga Acero -->
+        <div class="guide-pane" id="gp-2">
+          <h4>Viga de Acero Estructural (AISC)</h4>
+          <div class="guide-row"><span class="guide-sym">Perfil</span><span class="guide-desc">Designación del perfil (ej. W16×40, IPE 300)</span><span class="guide-unit">—</span></div>
+          <div class="guide-row"><span class="guide-sym">Fy</span><span class="guide-desc">Fluencia del acero</span><span class="guide-unit">ksi o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">Fu</span><span class="guide-desc">Resistencia última del acero (si aplica)</span><span class="guide-unit">ksi o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">WD, WL</span><span class="guide-desc">Cargas muertas y vivas distribuidas</span><span class="guide-unit">kip/ft o kN/m</span></div>
+          <div class="guide-row"><span class="guide-sym">L</span><span class="guide-desc">Luz de la viga</span><span class="guide-unit">ft o m</span></div>
+          <div class="guide-row"><span class="guide-sym">Lb</span><span class="guide-desc">Longitud no arriostrada (para pandeo lateral)</span><span class="guide-unit">ft o m</span></div>
+          <div class="guide-row"><span class="guide-sym">Apoyos</span><span class="guide-desc">Tipo de apoyo y condiciones de borde</span><span class="guide-unit">—</span></div>
+          <div class="guide-note">💡 Indica el método de diseño (LRFD o ASD) y qué verificar: flexión, cortante, deflexión.</div>
+        </div>
+
+        <!-- Losa -->
+        <div class="guide-pane" id="gp-3">
+          <h4>Losa de Concreto Reforzado (ACI 318)</h4>
+          <div class="guide-row"><span class="guide-sym">h</span><span class="guide-desc">Espesor de la losa</span><span class="guide-unit">cm</span></div>
+          <div class="guide-row"><span class="guide-sym">d</span><span class="guide-desc">Peralte efectivo</span><span class="guide-unit">cm</span></div>
+          <div class="guide-row"><span class="guide-sym">f'c</span><span class="guide-desc">Resistencia del concreto</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">fy</span><span class="guide-desc">Fluencia del acero</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">WD, WL</span><span class="guide-desc">Cargas muertas y vivas (incluir peso propio si aplica)</span><span class="guide-unit">kN/m² o kg/m²</span></div>
+          <div class="guide-row"><span class="guide-sym">Lx, Ly</span><span class="guide-desc">Dimensiones del paño (para losa en dos direcciones)</span><span class="guide-unit">m</span></div>
+          <div class="guide-row"><span class="guide-sym">Tipo</span><span class="guide-desc">Losa en una o dos direcciones, maciza o nervada</span><span class="guide-unit">—</span></div>
+          <div class="guide-note">💡 Para losa en dos direcciones indica si las 4 aristas están simplemente apoyadas o empotradas.</div>
+        </div>
+
+        <!-- Zapata -->
+        <div class="guide-pane" id="gp-4">
+          <h4>Zapata Aislada de Concreto (ACI 318)</h4>
+          <div class="guide-row"><span class="guide-sym">PD, PL</span><span class="guide-desc">Carga muerta y viva del servicio</span><span class="guide-unit">kN o ton</span></div>
+          <div class="guide-row"><span class="guide-sym">qa</span><span class="guide-desc">Capacidad admisible del suelo</span><span class="guide-unit">kN/m² o t/m²</span></div>
+          <div class="guide-row"><span class="guide-sym">f'c</span><span class="guide-desc">Resistencia del concreto de la zapata</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">fy</span><span class="guide-desc">Fluencia del acero de refuerzo</span><span class="guide-unit">kg/cm² o MPa</span></div>
+          <div class="guide-row"><span class="guide-sym">Col.</span><span class="guide-desc">Dimensiones de la columna que soporta</span><span class="guide-unit">cm</span></div>
+          <div class="guide-row"><span class="guide-sym">Df</span><span class="guide-desc">Profundidad de desplante</span><span class="guide-unit">m</span></div>
+          <div class="guide-row"><span class="guide-sym">γsuelo</span><span class="guide-desc">Peso específico del suelo (aprox. 1.8 t/m³)</span><span class="guide-unit">t/m³</span></div>
+          <div class="guide-note">💡 Especifica si quieres dimensionar la zapata o verificar una ya propuesta (B × L × h dados).</div>
+        </div>
+
+        <!-- Conexión Acero -->
+        <div class="guide-pane" id="gp-5">
+          <h4>Conexión Atornillada / Soldada (AISC)</h4>
+          <div class="guide-row"><span class="guide-sym">Tipo</span><span class="guide-desc">Atornillada (pernos) o soldada (filete / ranura)</span><span class="guide-unit">—</span></div>
+          <div class="guide-row"><span class="guide-sym">Pu / Vu</span><span class="guide-desc">Carga axial última o cortante último</span><span class="guide-unit">kN o kip</span></div>
+          <div class="guide-row"><span class="guide-sym">Acero</span><span class="guide-desc">Grado del acero (A36, A572 Gr50, etc.)</span><span class="guide-unit">—</span></div>
+          <div class="guide-row"><span class="guide-sym">Pernos</span><span class="guide-desc">Diámetro y grado (A325, A490) si son atornillados</span><span class="guide-unit">pulg</span></div>
+          <div class="guide-row"><span class="guide-sym">Soldadura</span><span class="guide-desc">Tamaño del filete o electrodo (E70XX) si es soldada</span><span class="guide-unit">pulg o mm</span></div>
+          <div class="guide-row"><span class="guide-sym">Geometría</span><span class="guide-desc">Número de pernos, disposición, distancias mínimas</span><span class="guide-unit">—</span></div>
+          <div class="guide-note">💡 Indica si es conexión a cortante (simple) o a momento (rígida) y los perfiles involucrados.</div>
+        </div>
+
+      </div>
     </div>
 
     <div class="loader" id="loader">
@@ -836,6 +1063,18 @@
 
       el.classList.add('active');
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function toggleGuide() {
+      const toggle = document.getElementById('guide-toggle');
+      const panel  = document.getElementById('guide-panel');
+      const open   = panel.classList.toggle('open');
+      toggle.classList.toggle('open', open);
+    }
+
+    function switchGuide(idx) {
+      document.querySelectorAll('.guide-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+      document.querySelectorAll('.guide-pane').forEach((p, i) => p.classList.toggle('active', i === idx));
     }
 
     async function solveImage() {

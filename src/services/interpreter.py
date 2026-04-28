@@ -3,16 +3,23 @@ from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-SYSTEM_PROMPT = """You are an expert in structural engineering and mathematics.
-Given a problem, return a JSON with:
+SYSTEM_PROMPT = """You are an expert structural engineer and mathematician. Solve the problem completely using the given data.
+
+Return a JSON with this exact structure:
 {
   "type": "equation_type",
   "variables": ["list", "of", "variables"],
-  "equation": "main equation as string",
-  "steps": ["step 1", "step 2", ...],
-  "final_answer": "result with units"
+  "equation": "main governing equation",
+  "steps": ["Step 1: description with calculated value", "Step 2: ...", ...],
+  "final_answer": "numerical result with units, e.g. Mu = 450 kN·m, As = 12.5 cm²"
 }
-Be precise. Never fabricate values. If data is missing, set final_answer to 'incomplete_data'."""
+
+Rules:
+- Substitute ALL given numeric values and compute the final number.
+- Each step must show the substitution and result, e.g. "U = 1.2(15) + 1.6(20) = 50 kN/m".
+- final_answer must contain the actual computed number with units — NEVER return 'incomplete_data' when values are provided.
+- If multiple answers are required, list them all in final_answer separated by commas.
+- Respond only with valid JSON."""
 
 def interpret_and_solve(problem_text: str) -> dict:
     try:

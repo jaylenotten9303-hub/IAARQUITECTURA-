@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArchiSolve AI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a23;
+      --border: #252b38;
+      --accent: #6c8aff;
+      --accent-dim: #3d4f99;
+      --text: #e8eaf0;
+      --muted: #7a8299;
+      --success: #4ade80;
+      --error: #f87171;
+      --radius: 12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #a0b4ff, #6c8aff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Drop zone */
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+      background: rgba(108, 138, 255, 0.05);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .dropzone-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .dropzone p { color: var(--muted); font-size: 0.9rem; }
+    .dropzone strong { color: var(--text); }
+
+    #file-name {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--accent);
+      min-height: 20px;
+    }
+
+    /* Text input */
+    textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 12px;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { outline: none; border-color: var(--accent); }
+
+    textarea::placeholder { color: var(--muted); }
+
+    /* Button */
+    button.submit {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button.submit:hover { opacity: 0.88; }
+    button.submit:active { transform: scale(0.98); }
+    button.submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      text-align: center;
+      padding: 32px;
+      color: var(--muted);
+    }
+
+    .loader.active { display: block; }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Result */
+    .result {
+      display: none;
+      margin-top: 24px;
+    }
+
+    .result.active { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .badge.success { background: rgba(74,222,128,0.12); color: var(--success); }
+    .badge.error   { background: rgba(248,113,113,0.12); color: var(--error); }
+
+    .result-section {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .result-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .result-section p, .result-section li {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .result-section ul {
+      padding-left: 20px;
+    }
+
+    .result-section li { margin-bottom: 4px; }
+
+    .answer {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .verify-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .verify-pill.verified   { background: rgba(74,222,128,0.12); color: var(--success); }
+    .verify-pill.unverified { background: rgba(248,113,113,0.12); color: var(--error); }
+    .verify-pill.partial    { background: rgba(251,191,36,0.12);  color: #fbbf24; }
+
+    .error-box {
+      display: none;
+      background: rgba(248,113,113,0.08);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px;
+      padding: 14px 16px;
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-top: 16px;
+    }
+
+    .error-box.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>ArchiSolve AI</h1>
+    <p>Sube una foto o escribe el problema — la IA lo resuelve.</p>
+  </header>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('image')">Foto / PDF</button>
+      <button class="tab" onclick="switchTab('text')">Texto</button>
+    </div>
+
+    <!-- Image tab -->
+    <div id="tab-image" class="tab-content active">
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.pdf" />
+        <div class="dropzone-icon">📐</div>
+        <p><strong>Arrastra la foto aquí</strong></p>
+        <p>o haz click para seleccionar · JPG, PNG, PDF</p>
+        <div id="file-name"></div>
+      </div>
+      <button class="submit" id="btn-image" onclick="solveImage()">Resolver problema</button>
+    </div>
+
+    <!-- Text tab -->
+    <div id="tab-text" class="tab-content">
+      <textarea id="text-input" placeholder="Escribe el problema aquí. Ej: Una viga de acero A36 de 6m con carga distribuida de 20 kN/m, calcula la deflexión máxima..."></textarea>
+      <button class="submit" id="btn-text" onclick="solveText()">Resolver problema</button>
+    </div>
+
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <p>Analizando el problema...</p>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    const API = '';  // mismo dominio
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0) === (tab === 'image')));
+      document.getElementById('tab-image').classList.toggle('active', tab === 'image');
+      document.getElementById('tab-text').classList.toggle('active', tab === 'text');
+      hideResult();
+    }
+
+    // Drag & drop
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) setFile(file);
+    });
+
+    document.getElementById('file-input').addEventListener('change', e => {
+      if (e.target.files[0]) setFile(e.target.files[0]);
+    });
+
+    function setFile(file) {
+      document.getElementById('file-name').textContent = '✓ ' + file.name;
+    }
+
+    function showLoader() {
+      document.getElementById('loader').classList.add('active');
+      document.getElementById('result').classList.remove('active');
+      document.getElementById('error-box').classList.remove('active');
+    }
+
+    function hideResult() {
+      document.getElementById('loader').classList.remove('active');
+      document.getElementById('result').classList.remove('active');
+      document.getElementById('error-box').classList.remove('active');
+    }
+
+    function showError(msg) {
+      document.getElementById('loader').classList.remove('active');
+      const box = document.getElementById('error-box');
+      box.textContent = msg;
+      box.classList.add('active');
+    }
+
+    function renderResult(data) {
+      document.getElementById('loader').classList.remove('active');
+      const el = document.getElementById('result');
+
+      const steps = (data.solution?.steps || []).map(s => `<li>${s}</li>`).join('');
+      const answer = data.solution?.final_answer || '—';
+      const verification = data.verification?.result || '';
+      const verifyClass = verification.toLowerCase().includes('verified') ? 'verified'
+                        : verification.toLowerCase().includes('partial') ? 'partial'
+                        : 'unverified';
+      const interpreted = data.interpreted_data || {};
+
+      el.innerHTML = `
+        <div class="result-header">
+          <span class="badge success">✓ Resuelto</span>
+        </div>
+
+        ${interpreted.equation ? `
+        <div class="result-section">
+          <h3>Ecuación detectada</h3>
+          <p>${interpreted.equation}</p>
+        </div>` : ''}
+
+        ${steps ? `
+        <div class="result-section">
+          <h3>Pasos</h3>
+          <ul>${steps}</ul>
+        </div>` : ''}
+
+        <div class="result-section">
+          <h3>Respuesta final</h3>
+          <p class="answer">${answer}</p>
+        </div>
+
+        ${verification ? `
+        <div class="result-section">
+          <h3>Verificación</h3>
+          <span class="verify-pill ${verifyClass}">${verification}</span>
+        </div>` : ''}
+      `;
+
+      el.classList.add('active');
+    }
+
+    async function solveImage() {
+      const file = document.getElementById('file-input').files[0];
+      if (!file) { showError('Selecciona una foto primero.'); return; }
+
+      const btn = document.getElementById('btn-image');
+      btn.disabled = true;
+      showLoader();
+
+      try {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch(API + '/api/v1/solve', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error del servidor');
+        renderResult(data);
+      } catch (e) {
+        showError('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function solveText() {
+      const text = document.getElementById('text-input').value.trim();
+      if (!text) { showError('Escribe el problema primero.'); return; }
+
+      const btn = document.getElementById('btn-text');
+      btn.disabled = true;
+      showLoader();
+
+      try {
+        const res = await fetch(API + '/api/v1/solve-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Error del servidor');
+        renderResult(data);
+      } catch (e) {
+        showError('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>

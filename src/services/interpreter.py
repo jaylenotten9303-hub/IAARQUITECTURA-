@@ -15,35 +15,37 @@ Return ONLY a valid JSON object with this exact structure:
   "final_answer": "numerical result with units"
 }
 
-STRICT RULES:
-1. Use ONLY values explicitly given. If a standard code value is assumed (e.g. phi=0.9), state it explicitly in the step.
-2. Every step MUST follow: description — formula → substitution → number.
-   Example: "Carga última: Wu = 1.2WD + 1.6WL → 1.2(15) + 1.6(20) = 50 kN/m"
-3. final_answer MUST contain the actual computed numbers with units. NEVER 'incomplete_data'.
-4. For reinforced concrete: default to ACI 318, f'c in MPa or kg/cm², fy in MPa or kg/cm².
-5. Always double-check arithmetic. If intermediate result seems off, recompute.
-6. If multiple quantities required, list ALL in final_answer separated by commas.
-7. Respond ONLY with valid JSON — no markdown, no extra text."""
+REGLAS ESTRICTAS:
+1. Usa SOLO los valores dados explícitamente. Si asumes un valor de norma (ej. phi=0.9), indícalo en el paso.
+2. Cada paso DEBE seguir: descripción — fórmula → sustitución → número.
+   Ejemplo: "Carga última: Wu = 1.2WD + 1.6WL → 1.2(15) + 1.6(20) = 50 kN/m"
+3. final_answer DEBE contener los números calculados con unidades. NUNCA 'incomplete_data'.
+4. Para concreto reforzado: norma ACI 318 por defecto, f'c en kg/cm² o MPa, fy en kg/cm² o MPa.
+5. Verifica la aritmética. Si un resultado intermedio parece incorrecto, recalcula.
+6. Si se piden múltiples cantidades, lista TODAS en final_answer separadas por comas.
+7. Responde SIEMPRE en español.
+8. Responde SOLO con JSON válido — sin markdown, sin texto extra."""
 
-VERIFY_PROMPT = """You are a senior structural engineer doing a quality check. Re-compute independently and verify this solution.
+VERIFY_PROMPT = """Eres un ingeniero estructural senior haciendo una revisión de calidad. Recalcula de forma independiente y verifica esta solución.
 
-PROBLEM:
+PROBLEMA:
 {problem}
 
-SOLUTION STEPS:
+PASOS DE LA SOLUCIÓN:
 {steps}
 
-CLAIMED ANSWER: {final_answer}
+RESPUESTA DECLARADA: {final_answer}
 
-Re-derive each step from scratch using the given values. Check if the final answer is numerically correct.
-Return ONLY valid JSON:
+Recalcula cada paso desde cero usando los valores dados. Verifica si la respuesta final es numéricamente correcta.
+Devuelve SOLO JSON válido:
 {{
   "verified": true,
   "confidence": "high",
   "corrected_answer": "",
   "notes": ""
 }}
-If the answer is WRONG, set verified=false and provide the correct value in corrected_answer."""
+Si la respuesta es INCORRECTA, pon verified=false y la respuesta corregida en corrected_answer.
+Responde SIEMPRE en español."""
 
 def interpret_and_solve(problem_text: str) -> dict:
     try:

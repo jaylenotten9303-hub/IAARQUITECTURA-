@@ -394,49 +394,131 @@
       display: block;
     }
 
-    /* Steps */
-    .steps-list {
+    /* ─── Datos table ─── */
+    .datos-grid {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 16px;
+      font-size: 0.83rem;
+    }
+
+    .datos-grid .dg-head {
+      background: rgba(108,138,255,0.12);
+      color: var(--accent);
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .datos-grid .dg-cell {
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      align-items: center;
+    }
+
+    .datos-grid .dg-cell:last-child,
+    .datos-grid .dg-cell:nth-last-child(2),
+    .datos-grid .dg-cell:nth-last-child(3) { border-bottom: none; }
+
+    .dg-var {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .dg-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .dg-desc { color: var(--text2); }
+
+    /* ─── Calculation table ─── */
+    .calc-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       margin-bottom: 16px;
     }
 
-    .step-item {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      background: rgba(0,0,0,0.2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 14px 16px;
-      transition: border-color 0.15s;
+    .calc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+      min-width: 480px;
     }
 
-    .step-item:hover { border-color: rgba(108,138,255,0.2); }
+    .calc-table thead tr {
+      background: rgba(108,138,255,0.12);
+    }
 
-    .step-num {
-      min-width: 24px;
-      height: 24px;
-      border-radius: 6px;
-      background: rgba(108,138,255,0.15);
+    .calc-table th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .calc-table th:first-child { width: 36px; text-align: center; }
+    .calc-table th:last-child  { text-align: right; }
+
+    .calc-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.15s;
+    }
+
+    .calc-table tbody tr:last-child { border-bottom: none; }
+    .calc-table tbody tr:hover { background: rgba(108,138,255,0.04); }
+
+    .calc-table td {
+      padding: 11px 14px;
+      vertical-align: top;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .calc-table td:first-child {
+      text-align: center;
       color: var(--accent);
       font-size: 0.72rem;
       font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0.7;
+      white-space: nowrap;
     }
 
-    .step-text {
-      font-size: 0.88rem;
-      line-height: 1.65;
-      color: var(--text);
+    .calc-table .td-formula {
       font-family: 'JetBrains Mono', monospace;
-      word-break: break-word;
+      font-size: 0.8rem;
+      color: #c4d0ff;
+      line-height: 1.6;
     }
+
+    .calc-table .td-resultado {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--success);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .calc-table tr.verificacion td { color: var(--warn); opacity: 0.85; }
 
     /* Final answer */
     .answer-block {
@@ -666,24 +748,70 @@
       document.getElementById('loader').classList.remove('active');
       const el = document.getElementById('result');
 
-      const steps = data.solution?.steps || [];
-      const answer = data.solution?.final_answer || '—';
-      const equation = data.interpreted_data?.equation || '';
+      const steps       = data.solution?.steps || [];
+      const answer      = data.solution?.final_answer || '—';
+      const equation    = data.interpreted_data?.equation || '';
+      const datos       = data.interpreted_data?.datos || [];
       const verification = data.verification?.result || '';
 
       const verifyClass = verification.toLowerCase().includes('valid') || verification.toLowerCase().includes('verified')
-        ? 'verified'
-        : verification.toLowerCase().includes('partial') ? 'partial' : 'unverified';
-
-      const verifyIcon = verifyClass === 'verified' ? '✓' : verifyClass === 'partial' ? '~' : '✗';
+        ? 'verified' : verification.toLowerCase().includes('partial') ? 'partial' : 'unverified';
+      const verifyIcon  = verifyClass === 'verified' ? '✓' : verifyClass === 'partial' ? '~' : '✗';
       const verifyLabel = verifyClass === 'verified' ? 'Verificado' : verifyClass === 'partial' ? 'Parcial' : 'No verificado';
 
-      const stepsHtml = steps.map((s, i) => `
-        <div class="step-item">
-          <div class="step-num">${i + 1}</div>
-          <div class="step-text">${escHtml(s)}</div>
-        </div>
-      `).join('');
+      // Datos del problema
+      let datosHtml = '';
+      if (datos.length) {
+        const rows = datos.map(d => `
+          <div class="dg-cell dg-var">${escHtml(d.variable || '')}</div>
+          <div class="dg-cell dg-val">${escHtml(d.valor || '')}</div>
+          <div class="dg-cell dg-desc">${escHtml(d.descripcion || '')}</div>
+        `).join('');
+        datosHtml = `
+          <div class="section-label">Datos del problema</div>
+          <div class="datos-grid">
+            <div class="dg-head">Variable</div>
+            <div class="dg-head">Valor</div>
+            <div class="dg-head">Descripción</div>
+            ${rows}
+          </div>`;
+      }
+
+      // Tabla de cálculo
+      let tableHtml = '';
+      if (steps.length) {
+        const rows = steps.map((s, i) => {
+          const isVerif = typeof s === 'object' && s.descripcion === 'Verificación automática';
+          if (typeof s === 'object') {
+            return `<tr class="${isVerif ? 'verificacion' : ''}">
+              <td>${i + 1}</td>
+              <td>${escHtml(s.descripcion || '')}</td>
+              <td class="td-formula">${escHtml(s.formula || '')}${s.sustitucion ? '<br><span style="opacity:0.7">→ ' + escHtml(s.sustitucion) + '</span>' : ''}</td>
+              <td class="td-resultado">${escHtml(s.resultado || '')}</td>
+            </tr>`;
+          }
+          // fallback: string step
+          return `<tr>
+            <td>${i + 1}</td>
+            <td colspan="2">${escHtml(s)}</td>
+            <td class="td-resultado">—</td>
+          </tr>`;
+        }).join('');
+
+        tableHtml = `
+          <div class="section-label">Procedimiento de cálculo</div>
+          <div class="calc-table-wrap">
+            <table class="calc-table">
+              <thead><tr>
+                <th>#</th>
+                <th>Descripción</th>
+                <th>Fórmula / Sustitución</th>
+                <th>Resultado</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }
 
       el.innerHTML = `
         <div class="result-header">
@@ -697,9 +825,8 @@
           ${escHtml(equation)}
         </div>` : ''}
 
-        ${steps.length ? `
-        <div class="section-label">Procedimiento paso a paso</div>
-        <div class="steps-list">${stepsHtml}</div>` : ''}
+        ${datosHtml}
+        ${tableHtml}
 
         <div class="answer-block">
           <div class="answer-label">Respuesta final</div>

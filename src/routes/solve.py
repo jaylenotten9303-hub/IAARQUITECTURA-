@@ -34,6 +34,7 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
             "type":      interpreted.get("type"),
             "variables": interpreted.get("variables"),
             "equation":  equation,
+            "datos":     interpreted.get("datos", []),
         },
         steps=interpreted.get("steps", []),
         final_answer=interpreted.get("final_answer", ""),

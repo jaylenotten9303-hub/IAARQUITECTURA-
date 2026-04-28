@@ -4,23 +4,31 @@ from openai import OpenAI
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-SYSTEM_PROMPT = """You are an expert structural engineer and mathematician specializing in reinforced concrete (ACI 318), steel structures (AISC), and structural mechanics. Solve the problem completely using ONLY the given data.
+SYSTEM_PROMPT = """Eres un ingeniero estructural experto en concreto reforzado (ACI 318), estructuras de acero (AISC) y mecánica estructural. Resuelve el problema completamente usando SOLO los datos proporcionados.
 
-Return ONLY a valid JSON object with this exact structure:
+Devuelve SOLO un JSON válido con esta estructura exacta:
 {
-  "type": "equation_type",
-  "variables": ["list", "of", "variables"],
-  "equation": "main governing equation",
-  "steps": ["Step 1: description — formula → substitution → result", "Step 2: ...", ...],
-  "final_answer": "numerical result with units"
+  "type": "tipo de problema",
+  "equation": "ecuación principal de gobierno",
+  "datos": [
+    {"variable": "símbolo", "valor": "número con unidades", "descripcion": "nombre del dato"}
+  ],
+  "steps": [
+    {
+      "descripcion": "qué se calcula en este paso",
+      "formula": "ecuación simbólica",
+      "sustitucion": "números sustituidos",
+      "resultado": "valor calculado con unidades"
+    }
+  ],
+  "final_answer": "resultado numérico con unidades"
 }
 
 REGLAS ESTRICTAS:
-1. Usa SOLO los valores dados explícitamente. Si asumes un valor de norma (ej. phi=0.9), indícalo en el paso.
-2. Cada paso DEBE seguir: descripción — fórmula → sustitución → número.
-   Ejemplo: "Carga última: Wu = 1.2WD + 1.6WL → 1.2(15) + 1.6(20) = 50 kN/m"
-3. final_answer DEBE contener los números calculados con unidades. NUNCA 'incomplete_data'.
-4. Para concreto reforzado: norma ACI 318 por defecto, f'c en kg/cm² o MPa, fy en kg/cm² o MPa.
+1. Usa SOLO los valores dados. Si asumes un valor de norma (ej. φ=0.9), ponlo como dato con descripcion="Norma ACI 318".
+2. Cada step DEBE tener los 4 campos: descripcion, formula, sustitucion, resultado.
+3. final_answer DEBE tener los números calculados con unidades. NUNCA 'incomplete_data'.
+4. Para concreto reforzado: norma ACI 318, f'c en kg/cm² o MPa, fy en kg/cm² o MPa.
 5. Verifica la aritmética. Si un resultado intermedio parece incorrecto, recalcula.
 6. Si se piden múltiples cantidades, lista TODAS en final_answer separadas por comas.
 7. Responde SIEMPRE en español.
@@ -64,7 +72,12 @@ def interpret_and_solve(problem_text: str) -> dict:
         if not verified.get("verified", True) and verified.get("corrected_answer"):
             result["final_answer"] = verified["corrected_answer"]
             note = verified.get("notes", "Respuesta corregida por verificación")
-            result["steps"].append(f"✓ Verificación: {note}")
+            result["steps"].append({
+                "descripcion": "Verificación automática",
+                "formula": "—",
+                "sustitucion": note,
+                "resultado": verified["corrected_answer"],
+            })
 
         return result
     except Exception as e:
@@ -76,9 +89,18 @@ def interpret_and_solve(problem_text: str) -> dict:
             "final_answer": "error",
         }
 
+def _steps_to_text(steps: list) -> str:
+    lines = []
+    for i, s in enumerate(steps, 1):
+        if isinstance(s, dict):
+            lines.append(f"{i}. {s.get('descripcion','')} | {s.get('formula','')} | {s.get('sustitucion','')} = {s.get('resultado','')}")
+        else:
+            lines.append(f"{i}. {s}")
+    return "\n".join(lines)
+
 def _verify_solution(problem: str, solution: dict) -> dict:
     try:
-        steps_text = "\n".join(solution.get("steps", []))
+        steps_text = _steps_to_text(solution.get("steps", []))
         final = solution.get("final_answer", "")
         msg = VERIFY_PROMPT.format(problem=problem, steps=steps_text, final_answer=final)
         response = client.chat.completions.create(

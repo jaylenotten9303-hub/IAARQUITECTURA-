@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArchiSolve — Antigravity</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #080b12;
+      --accent:  #6c8aff;
+      --accent2: #a78bfa;
+      --cyan:    #22d3ee;
+      --text:    #e8eaf6;
+      --text2:   #9ba3bf;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      user-select: none;
+    }
+
+    canvas#grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #hint {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: rgba(13,18,32,0.85);
+      border: 1px solid rgba(108,138,255,0.3);
+      border-radius: 99px;
+      padding: 8px 22px;
+      font-size: 0.8rem;
+      color: var(--text2);
+      pointer-events: none;
+      backdrop-filter: blur(12px);
+      transition: opacity 0.6s;
+      white-space: nowrap;
+    }
+
+    /* ── physics boxes ── */
+    .box {
+      position: fixed;
+      cursor: grab;
+      z-index: 10;
+      border-radius: 14px;
+      padding: 18px 24px;
+      border: 1px solid rgba(108,138,255,0.25);
+      background: rgba(13,18,40,0.75);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+      transition: box-shadow 0.15s;
+      will-change: transform;
+    }
+    .box:active { cursor: grabbing; }
+    .box.grabbed {
+      box-shadow: 0 0 0 2px var(--accent), 0 16px 48px rgba(108,138,255,0.3);
+    }
+    .box .label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .box .value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .box .sub {
+      font-size: 0.75rem;
+      color: var(--text2);
+      margin-top: 4px;
+    }
+    .box.accent-purple { border-color: rgba(167,139,250,0.3); }
+    .box.accent-purple .label { color: var(--accent2); }
+    .box.accent-cyan   { border-color: rgba(34,211,238,0.3); }
+    .box.accent-cyan   .label { color: var(--cyan); }
+
+    #logo {
+      position: fixed;
+      z-index: 10;
+      text-align: center;
+      cursor: grab;
+    }
+    #logo:active { cursor: grabbing; }
+    #logo .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(108,138,255,0.1);
+      border: 1px solid rgba(108,138,255,0.3);
+      border-radius: 99px;
+      padding: 6px 18px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    #logo h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.6rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #e8eaf6 0%, #a0b4ff 40%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      pointer-events: none;
+    }
+
+    /* gravity toggle button */
+    #toggle-btn {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      background: rgba(108,138,255,0.15);
+      border: 1px solid rgba(108,138,255,0.4);
+      border-radius: 99px;
+      padding: 12px 32px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    #toggle-btn:hover {
+      background: rgba(108,138,255,0.28);
+      box-shadow: 0 0 24px rgba(108,138,255,0.3);
+    }
+    #toggle-btn.zero-g {
+      border-color: rgba(34,211,238,0.5);
+      background: rgba(34,211,238,0.12);
+      box-shadow: 0 0 32px rgba(34,211,238,0.25);
+    }
+
+    #back-link {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 200;
+      font-size: 0.78rem;
+      color: var(--text2);
+      text-decoration: none;
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: rgba(13,18,32,0.6);
+      backdrop-filter: blur(8px);
+      transition: color 0.2s;
+    }
+    #back-link:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+  <canvas id="grid"></canvas>
+
+  <div id="hint">Arrastra los elementos · Click en vacío para lanzar · Botón abajo para cambiar gravedad</div>
+
+  <a href="/" id="back-link">← ArchiSolve</a>
+
+  <!-- Physics objects -->
+  <div class="box" id="b0">
+    <div class="label">Área de acero</div>
+    <div class="value">13.77 cm²</div>
+    <div class="sub">ACI 318 — Viga T</div>
+  </div>
+
+  <div class="box accent-purple" id="b1">
+    <div class="label">Momento último</div>
+    <div class="value">Mu = 216 kN·m</div>
+    <div class="sub">Combinación 1.2D + 1.6L</div>
+  </div>
+
+  <div class="box accent-cyan" id="b2">
+    <div class="label">Resistencia concreto</div>
+    <div class="value">f'c = 280 kg/cm²</div>
+    <div class="sub">Norma ACI 318-19</div>
+  </div>
+
+  <div class="box" id="b3">
+    <div class="label">Acero de refuerzo</div>
+    <div class="value">fy = 4200 kg/cm²</div>
+    <div class="sub">Grado 60</div>
+  </div>
+
+  <div class="box accent-purple" id="b4">
+    <div class="label">Factor de reducción</div>
+    <div class="value">φ = 0.90</div>
+    <div class="sub">Flexión pura — ACI 9.3</div>
+  </div>
+
+  <div class="box accent-cyan" id="b5">
+    <div class="label">Cuantía mínima</div>
+    <div class="value">ρ_min = 0.0033</div>
+    <div class="sub">ACI 318 — Art. 9.6.1</div>
+  </div>
+
+  <div class="box" id="b6">
+    <div class="label">Cortante último</div>
+    <div class="value">Vu = 85 kN</div>
+    <div class="sub">Envolvente de diseño</div>
+  </div>
+
+  <div class="box accent-purple" id="b7">
+    <div class="label">Profundidad efectiva</div>
+    <div class="value">d = 46 cm</div>
+    <div class="sub">b = 30 cm · h = 52 cm</div>
+  </div>
+
+  <div id="logo">
+    <div class="badge">⬡ ArchiSolve AI</div>
+    <h1>Antigravity<br>Mode</h1>
+  </div>
+
+  <button id="toggle-btn">🌍 Gravedad normal</button>
+
+  <script>
+  (function () {
+    // ── grid canvas ─────────────────────────────────────────────
+    const gc  = document.getElementById('grid');
+    const gx  = gc.getContext('2d');
+    let GW, GH, gt = 0;
+
+    function resizeGrid() { GW = gc.width = window.innerWidth; GH = gc.height = window.innerHeight; }
+
+    function drawGrid(ts) {
+      gt = ts;
+      gx.clearRect(0, 0, GW, GH);
+      const bp = 0.5 + 0.5 * Math.sin(gt * 0.0007);
+      const MINOR = 40, MAJOR = 200;
+
+      for (let x = 0; x <= GW; x += MINOR) {
+        if (x % MAJOR === 0) continue;
+        const ph = 0.5 + 0.5 * Math.sin(gt * 0.0006 + x * 0.015);
+        gx.beginPath(); gx.moveTo(x,0); gx.lineTo(x,GH);
+        gx.strokeStyle = `rgba(108,138,255,${0.025*ph})`; gx.lineWidth = 0.5; gx.stroke();
+      }
+      for (let y = 0; y <= GH; y += MINOR) {
+        if (y % MAJOR === 0) continue;
+        const ph = 0.5 + 0.5 * Math.sin(gt * 0.0006 + y * 0.015);
+        gx.beginPath(); gx.moveTo(0,y); gx.lineTo(GW,y);
+        gx.strokeStyle = `rgba(108,138,255,${0.025*ph})`; gx.lineWidth = 0.5; gx.stroke();
+      }
+      for (let x = 0; x <= GW; x += MAJOR) {
+        const ph = 0.4 + 0.6 * Math.sin(gt * 0.0005 + x * 0.008);
+        const a  = 0.09 * ph * bp;
+        gx.beginPath(); gx.moveTo(x,0); gx.lineTo(x,GH);
+        gx.strokeStyle = `rgba(108,138,255,${a})`; gx.lineWidth = 1;
+        gx.shadowColor = `rgba(108,138,255,${a*0.8})`; gx.shadowBlur = 6; gx.stroke();
+      }
+      for (let y = 0; y <= GH; y += MAJOR) {
+        const ph = 0.4 + 0.6 * Math.sin(gt * 0.0005 + y * 0.008);
+        const a  = 0.09 * ph * bp;
+        gx.beginPath(); gx.moveTo(0,y); gx.lineTo(GW,y);
+        gx.strokeStyle = `rgba(108,138,255,${a})`; gx.lineWidth = 1;
+        gx.shadowColor = `rgba(108,138,255,${a*0.8})`; gx.shadowBlur = 6; gx.stroke();
+      }
+      gx.shadowBlur = 0;
+      for (let x = 0; x <= GW; x += MAJOR) {
+        for (let y = 0; y <= GH; y += MAJOR) {
+          const ph = 0.3 + 0.7 * Math.sin(gt * 0.001 + x*0.009 + y*0.007);
+          gx.beginPath(); gx.arc(x, y, 1.5, 0, Math.PI*2);
+          gx.fillStyle = `rgba(108,138,255,${0.35*ph*bp})`;
+          gx.shadowColor = 'rgba(108,138,255,0.6)'; gx.shadowBlur = 8*ph;
+          gx.fill();
+        }
+      }
+      gx.shadowBlur = 0;
+      requestAnimationFrame(drawGrid);
+    }
+
+    window.addEventListener('resize', resizeGrid);
+    resizeGrid();
+    requestAnimationFrame(drawGrid);
+
+    // ── physics engine ───────────────────────────────────────────
+    const GRAVITY   =  0.45;
+    const FRICTION  =  0.80;   // wall/floor bounce energy loss
+    const AIR_DRAG  =  0.995;  // per-frame velocity multiplier
+    const ZERO_DRAG =  0.998;
+
+    let zeroG = false;
+    const bodies = [];
+
+    function Body(el) {
+      this.el    = el;
+      const r    = el.getBoundingClientRect();
+      this.x     = r.left;
+      this.y     = r.top;
+      this.w     = r.width;
+      this.h     = r.height;
+      this.vx    = (Math.random() - 0.5) * 3;
+      this.vy    = (Math.random() - 0.5) * 3;
+      this.angle = 0;
+      this.va    = (Math.random() - 0.5) * 0.4;
+      this.grabbed = false;
+      this.gx0   = 0; this.gy0 = 0;
+      this.pvx   = 0; this.pvy = 0;
+    }
+
+    Body.prototype.update = function () {
+      if (this.grabbed) return;
+
+      const drag = zeroG ? ZERO_DRAG : AIR_DRAG;
+      this.vx *= drag;
+      this.vy *= drag;
+      if (!zeroG) this.vy += GRAVITY;
+
+      this.x += this.vx;
+      this.y += this.vy;
+      this.angle += this.va;
+      this.va *= 0.99;
+
+      const W = window.innerWidth, H = window.innerHeight;
+
+      // floor
+      if (this.y + this.h > H) {
+        this.y  = H - this.h;
+        this.vy = -Math.abs(this.vy) * FRICTION;
+        this.vx *= 0.92;
+        this.va *= 0.85;
+        if (Math.abs(this.vy) < 0.5) this.vy = 0;
+      }
+      // ceiling
+      if (this.y < 0) {
+        this.y  = 0;
+        this.vy = Math.abs(this.vy) * FRICTION;
+      }
+      // left wall
+      if (this.x < 0) {
+        this.x  = 0;
+        this.vx = Math.abs(this.vx) * FRICTION;
+      }
+      // right wall
+      if (this.x + this.w > W) {
+        this.x  = W - this.w;
+        this.vx = -Math.abs(this.vx) * FRICTION;
+      }
+    };
+
+    Body.prototype.render = function () {
+      this.el.style.transform = `translate(${this.x}px, ${this.y}px) rotate(${this.angle}deg)`;
+      this.el.style.left = '0';
+      this.el.style.top  = '0';
+    };
+
+    // initialise bodies
+    const elems = document.querySelectorAll('.box, #logo');
+    elems.forEach(el => {
+      const b = new Body(el);
+      bodies.push(b);
+
+      // drag
+      el.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        b.grabbed = true;
+        b.gx0 = e.clientX - b.x;
+        b.gy0 = e.clientY - b.y;
+        b.pvx = 0; b.pvy = 0;
+        el.classList.add('grabbed');
+        el.setPointerCapture(e.pointerId);
+      });
+      el.addEventListener('pointermove', e => {
+        if (!b.grabbed) return;
+        const nx = e.clientX - b.gx0;
+        const ny = e.clientY - b.gy0;
+        b.pvx = nx - b.x;
+        b.pvy = ny - b.y;
+        b.x = nx; b.y = ny;
+      });
+      el.addEventListener('pointerup', () => {
+        b.grabbed = false;
+        b.vx = b.pvx * 0.9;
+        b.vy = b.pvy * 0.9;
+        b.va = b.vx * 0.03;
+        el.classList.remove('grabbed');
+      });
+    });
+
+    // click on background → explode outward from click point
+    document.addEventListener('pointerdown', e => {
+      if (e.target !== document.body && e.target !== gc) return;
+      bodies.forEach(b => {
+        const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+        const dx = cx - e.clientX, dy = cy - e.clientY;
+        const dist = Math.max(Math.hypot(dx, dy), 30);
+        const force = 1800 / (dist * dist);
+        b.vx += (dx / dist) * force * 12;
+        b.vy += (dy / dist) * force * 12;
+        b.va += (Math.random() - 0.5) * 1.5;
+      });
+    });
+
+    // gravity toggle
+    const btn = document.getElementById('toggle-btn');
+    btn.addEventListener('click', () => {
+      zeroG = !zeroG;
+      btn.textContent = zeroG ? '🚀 Zero-G activo' : '🌍 Gravedad normal';
+      btn.classList.toggle('zero-g', zeroG);
+      if (zeroG) {
+        bodies.forEach(b => {
+          if (!b.grabbed) {
+            b.vx += (Math.random() - 0.5) * 8;
+            b.vy += -Math.random() * 10 - 4;
+            b.va += (Math.random() - 0.5) * 0.8;
+          }
+        });
+      }
+    });
+
+    // hide hint after 4s
+    setTimeout(() => {
+      const h = document.getElementById('hint');
+      if (h) h.style.opacity = '0';
+    }, 4000);
+
+    // main loop
+    function loop() {
+      bodies.forEach(b => { b.update(); b.render(); });
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
+  </script>
+
+</body>
+</html>

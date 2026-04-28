@@ -27,7 +27,7 @@ Devuelve SOLO un JSON válido con esta estructura exacta:
 REGLAS ESTRICTAS:
 1. Usa SOLO los valores dados. Si asumes un valor de norma (ej. φ=0.9), ponlo como dato con descripcion="Norma ACI 318".
 2. Cada step DEBE tener los 4 campos: descripcion, formula, sustitucion, resultado.
-3. final_answer DEBE tener los números calculados con unidades. NUNCA 'incomplete_data'.
+3. final_answer DEBE ser un STRING con los números calculados y unidades. NUNCA un objeto JSON, NUNCA 'incomplete_data'.
 4. Para concreto reforzado: norma ACI 318, f'c en kg/cm² o MPa, fy en kg/cm² o MPa.
 5. Verifica la aritmética. Si un resultado intermedio parece incorrecto, recalcula.
 6. Si se piden múltiples cantidades, lista TODAS en final_answer separadas por comas.

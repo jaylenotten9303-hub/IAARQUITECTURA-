@@ -24,6 +24,22 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
     interpreted = interpret_and_solve(problem_text)
     equation    = interpreted.get("equation", "")
 
+    # GPT-4o sometimes returns dicts instead of strings — sanitize
+    raw_answer = interpreted.get("final_answer", "")
+    if isinstance(raw_answer, dict):
+        raw_answer = ", ".join(f"{k} = {v}" for k, v in raw_answer.items())
+    elif not isinstance(raw_answer, str):
+        raw_answer = str(raw_answer)
+
+    raw_steps = interpreted.get("steps", [])
+    clean_steps = []
+    for s in raw_steps:
+        if isinstance(s, dict):
+            r = s.get("resultado", "")
+            clean_steps.append({**s, "resultado": r if isinstance(r, str) else str(r)})
+        else:
+            clean_steps.append(str(s))
+
     sym = solve_symbolic(equation) if equation else {"status": "error", "result": "no equation"}
     num = solve_numeric(problem_text) if equation else {"status": "error", "result": "no equation"}
     verification_status = verify(sym, num)
@@ -36,8 +52,8 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
             "equation":  equation,
             "datos":     interpreted.get("datos", []),
         },
-        steps=interpreted.get("steps", []),
-        final_answer=interpreted.get("final_answer", ""),
+        steps=clean_steps,
+        final_answer=raw_answer,
         verification_status=verification_status,
     )
     db.add(solution)

@@ -6,7 +6,9 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def extract_text_from_image(file_bytes: bytes, filename: str) -> str:
     ext = filename.rsplit(".", 1)[-1].lower()
-    mime = "application/pdf" if ext == "pdf" else f"image/{ext if ext != 'jpg' else 'jpeg'}"
+    if ext == "pdf":
+        raise ValueError("PDF no soportado. Sube una imagen JPG o PNG.")
+    mime = f"image/{'jpeg' if ext == 'jpg' else ext}"
     b64 = base64.b64encode(file_bytes).decode("utf-8")
 
     response = client.chat.completions.create(

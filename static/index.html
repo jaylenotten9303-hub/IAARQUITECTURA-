@@ -979,11 +979,13 @@
       document.getElementById('loader').classList.remove('active');
       const el = document.getElementById('result');
 
-      const steps       = data.solution?.steps || [];
-      const answer      = data.solution?.final_answer || '—';
-      const equation    = data.interpreted_data?.equation || '';
-      const datos       = data.interpreted_data?.datos || [];
-      const verification = data.verification?.result || '';
+      const steps            = data.solution?.steps || [];
+      const answer           = data.solution?.final_answer || '—';
+      const equation         = data.interpreted_data?.equation || '';
+      const datos            = data.interpreted_data?.datos || [];
+      const verification     = data.verification?.result || '';
+      const verificTecnica   = data.solution?.verificacion_tecnica || '';
+      const missingData      = data.solution?.missing_data || [];
 
       const verifyClass = verification.toLowerCase().includes('valid') || verification.toLowerCase().includes('verified')
         ? 'verified' : verification.toLowerCase().includes('partial') ? 'partial' : 'unverified';
@@ -1059,10 +1061,22 @@
         ${datosHtml}
         ${tableHtml}
 
+        ${missingData.length ? `
+        <div class="answer-block" style="border-color:var(--warn);background:rgba(251,191,36,0.08);">
+          <div class="answer-label" style="color:var(--warn)">⚠ Faltan datos</div>
+          <div class="answer-value" style="font-size:1rem;color:var(--warn)">${missingData.map(escHtml).join(', ')}</div>
+        </div>` : ''}
+
         <div class="answer-block">
           <div class="answer-label">Respuesta final</div>
           <div class="answer-value">${escHtml(answer)}</div>
         </div>
+
+        ${verificTecnica ? `
+        <div class="answer-block" style="border-color:var(--success);background:rgba(74,222,128,0.06);margin-top:12px;">
+          <div class="answer-label" style="color:var(--success)">✓ Verificación técnica</div>
+          <div class="answer-value" style="font-size:0.95rem;font-weight:400;line-height:1.6">${escHtml(verificTecnica)}</div>
+        </div>` : ''}
       `;
 
       el.classList.add('active');

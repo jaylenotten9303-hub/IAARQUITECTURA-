@@ -64,8 +64,10 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
         "problem_text":     problem_text,
         "interpreted_data": solution.interpreted_data,
         "solution": {
-            "steps":        solution.steps,
-            "final_answer": solution.final_answer,
+            "steps":               solution.steps,
+            "final_answer":        solution.final_answer,
+            "verificacion_tecnica": interpreted.get("verificacion_tecnica", ""),
+            "missing_data":        interpreted.get("missing_data", []),
         },
         "verification": {
             "method_1": "symbolic",

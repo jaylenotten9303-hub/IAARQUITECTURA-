@@ -1,14 +1,17 @@
+from typing import List
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from src.db.database import get_db
 from src.models.models import Problem, Solution, Log
-from src.services.ocr import extract_text_from_image
+from src.services.ocr import extract_text_from_images, MAX_IMAGES
 from src.services.interpreter import interpret_and_solve
 from src.services.solver import solve_symbolic, solve_numeric, verify
 
 router = APIRouter()
+
+ALLOWED_EXT = {"jpg", "jpeg", "png"}
 
 class TextInput(BaseModel):
     text: str
@@ -40,8 +43,8 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
     db.commit()
 
     return {
-        "status":          "success",
-        "problem_text":    problem_text,
+        "status":           "success",
+        "problem_text":     problem_text,
         "interpreted_data": solution.interpreted_data,
         "solution": {
             "steps":        solution.steps,
@@ -55,17 +58,24 @@ def _save_and_solve(problem_text: str, input_type: str, db: Session) -> dict:
     }
 
 @router.post("/solve")
-async def solve_image(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    allowed = {"jpg", "jpeg", "png", "pdf"}
-    ext = file.filename.rsplit(".", 1)[-1].lower()
-    if ext not in allowed:
-        raise HTTPException(status_code=400, detail="Unsupported file type")
+async def solve_image(files: List[UploadFile] = File(...), db: Session = Depends(get_db)):
+    if len(files) > MAX_IMAGES:
+        raise HTTPException(status_code=400, detail=f"Máximo {MAX_IMAGES} imágenes por solicitud.")
 
-    file_bytes = await file.read()
-    problem_text = extract_text_from_image(file_bytes, file.filename)
+    file_data = []
+    for f in files:
+        ext = f.filename.rsplit(".", 1)[-1].lower()
+        if ext not in ALLOWED_EXT:
+            raise HTTPException(status_code=400, detail=f"Tipo no soportado: {f.filename}. Usa JPG o PNG.")
+        file_data.append((await f.read(), f.filename))
+
+    try:
+        problem_text = extract_text_from_images(file_data)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
     if not problem_text.strip():
-        raise HTTPException(status_code=422, detail="Could not extract text from image")
+        raise HTTPException(status_code=422, detail="No se pudo extraer texto de las imágenes.")
 
     return _save_and_solve(problem_text, "image", db)
 

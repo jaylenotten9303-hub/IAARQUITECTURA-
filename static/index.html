@@ -193,13 +193,43 @@
 
     .dropzone p { color: var(--text2); font-size: 0.85rem; }
 
-    #file-name {
+    #file-list {
       margin-top: 14px;
-      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .file-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(108,138,255,0.1);
+      border: 1px solid rgba(108,138,255,0.2);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
       color: var(--accent);
-      font-weight: 500;
-      min-height: 20px;
       font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(74,222,128,0.1);
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 99px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--success);
+      margin-top: 10px;
     }
 
     /* ─── Textarea ─── */
@@ -535,11 +565,11 @@
     <!-- Image tab -->
     <div id="tab-image" class="tab-content active">
       <div class="dropzone" id="dropzone">
-        <input type="file" id="file-input" accept=".jpg,.jpeg,.png" />
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png" multiple />
         <span class="dropzone-icon">📐</span>
-        <div class="dropzone-title">Arrastra la imagen aquí</div>
-        <p>o haz clic para seleccionar · JPG, PNG</p>
-        <div id="file-name"></div>
+        <div class="dropzone-title">Arrastra las imágenes aquí</div>
+        <p>o haz clic para seleccionar · JPG, PNG · hasta 20 imágenes</p>
+        <div id="file-list"></div>
       </div>
       <button class="submit" id="btn-image" onclick="solveImage()">Resolver problema</button>
     </div>
@@ -575,21 +605,35 @@
       hideAll();
     }
 
+    let selectedFiles = [];
+
     const dropzone = document.getElementById('dropzone');
     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
     dropzone.addEventListener('drop', e => {
       e.preventDefault();
       dropzone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file) setFile(file);
+      if (e.dataTransfer.files.length) setFiles(Array.from(e.dataTransfer.files));
     });
     document.getElementById('file-input').addEventListener('change', e => {
-      if (e.target.files[0]) setFile(e.target.files[0]);
+      if (e.target.files.length) setFiles(Array.from(e.target.files));
     });
 
-    function setFile(file) {
-      document.getElementById('file-name').textContent = '✓ ' + file.name;
+    function setFiles(files) {
+      const valid = files.filter(f => /\.(jpe?g|png)$/i.test(f.name));
+      if (!valid.length) { showError('Solo se aceptan imágenes JPG o PNG.'); return; }
+      if (valid.length > 20) { showError('Máximo 20 imágenes por solicitud.'); return; }
+      selectedFiles = valid;
+      renderFileList();
+    }
+
+    function renderFileList() {
+      const el = document.getElementById('file-list');
+      const chips = selectedFiles.map(f =>
+        `<div class="file-chip">📄 ${f.name}</div>`
+      ).join('');
+      el.innerHTML = chips +
+        `<div class="file-count-badge">✓ ${selectedFiles.length} imagen${selectedFiles.length > 1 ? 'es' : ''} seleccionada${selectedFiles.length > 1 ? 's' : ''}</div>`;
     }
 
     function showLoader() {
@@ -668,8 +712,7 @@
     }
 
     async function solveImage() {
-      const file = document.getElementById('file-input').files[0];
-      if (!file) { showError('Selecciona una imagen primero.'); return; }
+      if (!selectedFiles.length) { showError('Selecciona al menos una imagen primero.'); return; }
 
       const btn = document.getElementById('btn-image');
       btn.disabled = true;
@@ -677,7 +720,7 @@
 
       try {
         const form = new FormData();
-        form.append('file', file);
+        selectedFiles.forEach(f => form.append('files', f));
         const res = await fetch(API + '/api/v1/solve', { method: 'POST', body: form });
         const text = await res.text();
         let data;
